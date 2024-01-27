@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .weather {
+            margin-bottom: 20px;
+        }
+
+        .weekly-forecast {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .forecast-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .forecast-item img {
+            width: 70px; /* Adjust image size */
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="date-time">
+    </div>
+    <div class="search">
+        <input type="text" placeholder="Enter City Name" spellcheck="false">
+        <button><img src="images/search.png"></button>
+    </div>
+    <div class="error">
+        <p>Invalid City Name</p>
+    </div>
+    <div class="weather">
+        <img src="images/rain.png" class="weather-icon">
+        <h1 class="temp">22°C</h1>
+        <h2 class="city">New York</h2>
+        <div class="details">
+            <div class="col">
+                <img src="images/humidity.png">
+                <div>
+                    <p class="humidity">50%</p>
+                    <p>Humidity</p>
+                </div>
+            </div>
+            <div class="col">
+                <img src="images/wind.png">
+                <div>
+                    <p class="wind">15 km/h</p>
+                    <p>Wind Speed</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="weekly-forecast">
+        <!-- Weekly forecast will be inserted here -->
+    </div>
+</div>
+
+<script>
+    const apiKey = "0b4dd1184e50b520d037f18653c637a8";
+    const apiUrl = "https://api.openweathermap.org/data/2.5/weather?units=metric&q=";
+    const forecastUrl = "https://api.openweathermap.org/data/2.5/forecast?units=metric&q=";
+
+    const searchBox = document.querySelector(".search input");
+    const searchBtn = document.querySelector(".search button");
+    const weatherIcon = document.querySelector(".weather-icon");
+    const dateTimeElement = document.querySelector('.date-time');
+    const weeklyForecastElement = document.querySelector('.weekly-forecast');
+
+    async function checkWeather(city) {
+        const response = await fetch(apiUrl + city + `&appid=${apiKey}`);
+
+        if (response.status == 404) {
+            document.querySelector(".error").style.display = "block";
+            document.querySelector(".weather").style.display = "none";
+        } else {
+            var data = await response.json();
+
+            document.querySelector(".city").innerHTML = data.name;
+            document.querySelector(".temp").innerHTML = Math.round(data.main.temp) + "°C";
+            document.querySelector(".humidity").innerHTML = data.main.humidity + "%";
+            document.querySelector(".wind").innerHTML = data.wind.speed + " km/h";
+
+            if (data.weather[0].main == "Clouds") {
+                weatherIcon.src = "images/clouds.png";
+            } else if (data.weather[0].main == "Clear") {
+                weatherIcon.src = "images/clear.png";
+            } else if (data.weather[0].main == "Rain") {
+                weatherIcon.src = "images/rain.png";
+                showAlert("It's raining!");
+            } else if (data.weather[0].main == "Snow") {
+                weatherIcon.src = "images/snow.png";
+                showAlert("It's snowing!");
+            } else if (data.weather[0].main == "Drizzle") {
+                weatherIcon.src = "images/drizzle.png";
+                showAlert("It's drizzling!");
+            } else if (data.weather[0].main == "Mist") {
+                weatherIcon.src = "images/mist.png";
+            }
+
+            document.querySelector(".weather").style.display = "block";
+            document.querySelector(".error").style.display = "none";
+
+            // Fetch weekly forecast after fetching current weather
+            fetchWeeklyForecast(data.coord.lat, data.coord.lon);
+        }
+    }
+
+    async function fetchWeeklyForecast(lat, lon) {
+        const response = await fetch(`${forecastUrl}&lat=${lat}&lon=${lon}&appid=${apiKey}`);
+        const data = await response.json();
+        displayWeeklyForecast(data.list);
+    }
+
+    function displayWeeklyForecast(forecastData) {
+        // Clear previous forecast data
+        weeklyForecastElement.innerHTML = "";
+
+        // Display weekly forecast for each day
+        let days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        let currentDate = null;
+        forecastData.forEach(item => {
+            const date = new Date(item.dt_txt);
+            const day = days[date.getDay()];
+            
+            if (day !== currentDate) {
+                const forecastItem = document.createElement('div');
+                forecastItem.classList.add('forecast-item');
+                forecastItem.innerHTML = `
+                    <img src="images/${item.weather[0].main.toLowerCase()}.png" class="forecast-icon">
+                    <p>${day}: ${Math.round(item.main.temp)}°C</p>
+                `;
+                weeklyForecastElement.appendChild(forecastItem);
+                currentDate = day;
+            }
+        });
+    }
+
+    function showAlert(message) {
+        alert(message);
+    }
+
+    searchBtn.addEventListener("click", () => {
+        checkWeather(searchBox.value);
+    });
+
+    // Function to get today's date and time in the format: "Tuesday, January 27, 2024 10:30 AM"
+    function getFormattedDateTime() {
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true };
+        return new Date().toLocaleString('en-US', options);
+    }
+
+    // Set today's date and time in the HTML element with class "date-time"
+    dateTimeElement.textContent = getFormattedDateTime();
+</script>
+
+</body>
+</html>
